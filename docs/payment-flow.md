@@ -14,9 +14,6 @@ This document outlines the complete payment flow in ClipPay, including the curre
 3. [Referral System](#referral-system)
    - [Referral Tracking](#referral-tracking)
    - [Referral Payment Calculation](#referral-payment-calculation)
-4. [Database Schema Changes](#database-schema-changes)
-5. [API Endpoints](#api-endpoints)
-6. [UI Components](#ui-components)
 
 ---
 
@@ -28,8 +25,6 @@ This document outlines the complete payment flow in ClipPay, including the curre
    - Brand creates an account on ClipPay
    - Brand completes profile information
    - Brand connects a payment method via Stripe
-     - Stripe customer ID is stored in `brands.stripe_customer_id`
-     - Payment method is stored as default in Stripe
 
 2. **Campaign Creation**
    - Brand creates a campaign with:
@@ -63,8 +58,6 @@ This document outlines the complete payment flow in ClipPay, including the curre
    - Creator registers on ClipPay
    - Creator completes profile information
    - Creator connects to Stripe Connect
-     - Stripe Connect account ID stored in `creators.stripe_account_id`
-     - Account status tracked in `creators.stripe_account_status`
 
 2. **Content Submission**
    - Creator submits content for campaigns
@@ -105,7 +98,7 @@ Brand (Stripe or PayPal) → Platform → Creator (Stripe or PayPal)
 
 1. **Account Setup**
    - Add PayPal connection option in brand settings
-   - Store PayPal customer ID in `brands.paypal_customer_id`
+   - Store PayPal customer ID
    - Allow setting preferred payment method (Stripe/PayPal)
 
 2. **Payment Processing**
@@ -115,16 +108,11 @@ Brand (Stripe or PayPal) → Platform → Creator (Stripe or PayPal)
      - Capture payment from brand
      - Record PayPal order ID in transaction
 
-3. **Implementation Requirements**
-   - PayPal SDK integration for payment processing
-   - PayPal order creation and capture API endpoints
-   - Payment method selection UI
-
 ### Creator PayPal Flow
 
 1. **Account Setup**
    - Add PayPal connection option in creator settings
-   - Store PayPal account ID in `creators.paypal_account_id`
+   - Store PayPal account ID
    - Allow setting preferred payout method (Stripe/PayPal)
 
 2. **Payout Processing**
@@ -134,11 +122,6 @@ Brand (Stripe or PayPal) → Platform → Creator (Stripe or PayPal)
      - Record PayPal payout ID in transaction
    - If Stripe selected:
      - Process via existing Stripe Transfer mechanism
-
-3. **Implementation Requirements**
-   - PayPal Payouts API integration
-   - Payout method selection UI
-   - PayPal account verification process
 
 ### Cross-Platform Payments
 
@@ -192,104 +175,3 @@ The system must handle scenarios where the brand and creator use different payme
 4. **Referral Payment Requirements**
    - Referrer must have active payout method (Stripe/PayPal)
    - Referred creator's submission must be approved and paid
-
----
-
-## Database Schema Changes
-
-To support PayPal integration, the following schema changes are required:
-
-```sql
--- Brands table changes
-ALTER TABLE brands
-ADD COLUMN paypal_customer_id TEXT,
-ADD COLUMN payment_method_preference TEXT DEFAULT 'stripe';
-
--- Creators table changes
-ALTER TABLE creators
-ADD COLUMN paypal_account_id TEXT,
-ADD COLUMN paypal_account_status TEXT,
-ADD COLUMN payout_method_preference TEXT DEFAULT 'stripe';
-
--- Transactions table changes
-ALTER TABLE transactions
-ADD COLUMN payment_processor TEXT DEFAULT 'stripe',
-ADD COLUMN paypal_order_id TEXT,
-ADD COLUMN paypal_payout_id TEXT;
-```
-
----
-
-## API Endpoints
-
-### Existing Endpoints to Modify
-
-1. `/api/payouts/process`
-   - Add payment method selection
-   - Add conditional logic for PayPal vs Stripe
-
-2. `/api/payouts/confirm`
-   - Add support for PayPal confirmation
-   - Handle cross-platform scenarios
-
-3. `/api/payment-methods`
-   - Add PayPal payment methods
-   - Support preference selection
-
-### New Endpoints to Create
-
-1. `/api/paypal/setup`
-   - Connect brand's PayPal account
-   - Store PayPal customer information
-
-2. `/api/paypal/connect`
-   - Connect creator's PayPal account
-   - Verify account for payouts
-
-3. `/api/paypal/payout`
-   - Process PayPal payouts to creators
-   - Handle batch payouts when possible
-
-4. `/api/settings/payment-preferences`
-   - Update payment/payout preferences
-   - Toggle between Stripe and PayPal
-
----
-
-## UI Components
-
-### Brand Interface Updates
-
-1. **Payment Method Settings**
-   - Add PayPal connection option
-   - Add payment method preference toggle
-   - Show connected account status
-
-2. **Checkout Process**
-   - Add payment method selection
-   - Support PayPal checkout flow
-   - Maintain consistent UX between methods
-
-### Creator Interface Updates
-
-1. **Payout Method Settings**
-   - Add PayPal connection option
-   - Add payout method preference toggle
-   - Show connected account status
-
-2. **Earnings Dashboard**
-   - Show payment method for each transaction
-   - Display pending payouts by platform
-   - Show referral earnings separately
-
-### Admin Interface Updates
-
-1. **Transaction Management**
-   - Filter by payment processor
-   - View payment details by platform
-   - Manage failed transactions
-
-2. **Reporting**
-   - Track platform fees by payment processor
-   - Monitor payment method adoption
-   - Analyze referral system performance
